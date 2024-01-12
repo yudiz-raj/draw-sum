@@ -10,6 +10,7 @@ var gameOptions = {
         rows: 5,
         cols: 5
     },
+    tiles: ["egg-1", "egg-2", "egg-3"],
     fallSpeed: 250,
     localStorageName: "drawsumgame"
 }
@@ -33,7 +34,8 @@ class boot {
         game.scale.pageAlignVertically = true;
         game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
         game.stage.disableVisibilityChange = true;
-        game.stage.backgroundColor = 0x051f21;
+        // game.stage.backgroundColor = 0x051f21;
+        // game.background.transperent = true
         this.game.load.image("playbutton", "assets/sprites/playbutton.png");
     }
     create() {
@@ -46,12 +48,16 @@ class preload {
     preload() {
         var loadingBar = this.add.sprite(game.width / 2, game.height / 2, "playbutton");
         loadingBar.anchor.setTo(0.5);
+        game.load.image("background", "assets/sprites/game-play.png");
         game.load.image("playbutton", "assets/sprites/playbutton.png");
         game.load.image("hand", "assets/sprites/hand.png");
         game.load.image("bigtile", "assets/sprites/bigtile.png");
         game.load.image("title", "assets/sprites/title.png");
         game.load.image("item", "assets/sprites/item.png");
         game.load.spritesheet("tiles", "assets/sprites/tiles.png", gameOptions.tileSize, gameOptions.tileSize);
+        game.load.spritesheet("egg-1", "assets/sprites/egg-1.png", gameOptions.tileSize, gameOptions.tileSize);
+        game.load.spritesheet("egg-2", "assets/sprites/egg-2.png", gameOptions.tileSize, gameOptions.tileSize);
+        game.load.spritesheet("egg-3", "assets/sprites/egg-3.png", gameOptions.tileSize, gameOptions.tileSize);
         game.load.spritesheet("arrows", "assets/sprites/arrows.png", gameOptions.tileSize * 3, gameOptions.tileSize * 3);
         game.load.spritesheet("numbers", "assets/sprites/numbers.png", gameOptions.tileSize, gameOptions.tileSize);
         // game.load.bitmapFont("bignumbersfont", "assets/fonts/bignumbersfont.png", "assets/fonts/bignumbersfont.fnt");
@@ -91,6 +97,9 @@ class theGame {
     constructor() { }
     create() {
         this.createLevel();
+        // const background = game.add.sprite(375, 667, "background");
+        // background.anchor.set(0.5);
+        // background.scale.set(0.8);
         game.input.onDown.add(this.pickTile, this);
         this.popSound = [game.add.audio("pop"), game.add.audio("pop2"), game.add.audio("pop3")];
         this.failSound = game.add.audio("fail");
@@ -122,7 +131,7 @@ class theGame {
         this.scoreText = game.add.text(game.width - 40, item.y - 130, "", { fontFamily: "font", fontSize: 72 });
         this.scoreText.anchor.set(1, 0);
         this.targetGroup = game.add.group();
-        this.arcGraphics = game.add.graphics(0, 0);
+        this.arcGraphics = game.add.graphics(-30, -40);
         this.tileMask = game.add.graphics(this.tileGroup.x, this.tileGroup.y - 40);
         this.tileMask.beginFill(0xffffff);
         this.tileMask.drawRect(0, 0, gameOptions.tileSize * gameOptions.fieldSize.cols, gameOptions.tileSize * gameOptions.fieldSize.rows + 40);
@@ -135,17 +144,17 @@ class theGame {
         }
         this.removedTiles = [];
         for (i = 0; i < 5; i++) {
-            var target = game.add.sprite((i % 3) * 230 + 115 * Math.floor(i / 3), 15 + Math.floor(i / 3) * 200, "bigtile");
-            target.tint = this.altTintColor;
+            var target = game.add.sprite((i % 5) * 150 + 115 * Math.floor(i / 5), 50 + Math.floor(i / 5) * 200, "bigtile");
+            // target.tint = this.altTintColor;
             target.numberToMatch = game.rnd.between(10, 14);
             target.energy = 360;
             target.energyLoss = this.energyLoss;
-            var bigNumber = game.add.text(100, 110, target.numberToMatch.toString(), { fontFamily: "bignumbersfont", fontSize: 90 });
+            var bigNumber = game.add.text(69, 60, target.numberToMatch.toString(), { fontFamily: "bignumbersfont", fontSize: 50 });
             bigNumber.anchor.set(0.5);
             target.addChild(bigNumber);
             this.targetGroup.add(target);
             this.targetsArray.push(target);
-            this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 100, 80, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
+            this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 100, 30, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
         }
         this.targetGroup.x = (game.width - this.targetGroup.width) / 2;
         this.timeLoop = game.time.events.loop(Phaser.Timer.SECOND / 20, this.updateCounter, this);
@@ -166,11 +175,11 @@ class theGame {
     }
     updateCounter() {
         this.arcGraphics.clear();
-        this.arcGraphics.lineStyle(20, 0xffffff);
+        this.arcGraphics.lineStyle(5, 0xffffff);
         for (var i = 0; i < this.targetsArray.length; i++) {
             this.targetsArray[i].energy -= this.targetsArray[i].energyLoss;
             if (this.targetsArray[i].energy > 0) {
-                this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 100, 80, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
+                this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 100, 30, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
             }
             else {
                 game.time.events.remove(this.timeLoop);
@@ -190,13 +199,14 @@ class theGame {
     addTile(row, col) {
         var tileXPos = col * gameOptions.tileSize + gameOptions.tileSize / 2;
         var tileYPos = row * gameOptions.tileSize + gameOptions.tileSize / 2;
-        var theTile = game.add.sprite(tileXPos, tileYPos, "tiles");
+        const randomTile = gameOptions.tiles[Phaser.Math.between(0, 2)];
+        var theTile = game.add.sprite(tileXPos, tileYPos, randomTile);
         theTile.anchor.set(0.5);
         theTile.picked = false;
         theTile.coordinate = new Phaser.Point(col, row);
         this.tilesArray[row][col] = theTile;
         theTile.value = game.rnd.between(1, 9);
-        theTile.tint = this.tintColor;
+        // theTile.tint = this.tintColor;
         var number = game.add.sprite(0, 0, "numbers");
         number.anchor.set(0.5);
         number.frame = theTile.value - 1;
