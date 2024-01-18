@@ -3,8 +3,8 @@ var savedData;
 var score;
 var gameOptions = {
     bgColors: [0x806033, 0x565110],
-    gameWidth: 750,
-    gameHeight: 1334,
+    gameWidth: 1920,
+    gameHeight: 1080,
     tileSize: 140,
     fieldSize: {
         rows: 5,
@@ -16,10 +16,14 @@ var gameOptions = {
 }
 window.onload = function () {
     var windowRatio = window.innerWidth / window.innerHeight;
-    if (windowRatio < gameOptions.gameWidth / gameOptions.gameHeight) {
-        gameOptions.gameHeight = gameOptions.gameWidth / windowRatio;
-    }
-    game = new Phaser.Game(gameOptions.gameWidth, gameOptions.gameHeight);
+    // if (windowRatio < gameOptions.gameWidth / gameOptions.gameHeight) {
+    //     gameOptions.gameHeight = gameOptions.gameWidth / windowRatio;
+    // }
+    game = new Phaser.Game({
+        width: gameOptions.gameWidth,
+        height: gameOptions.gameHeight,
+        transparent: true
+    });
     game.state.add("Boot", boot);
     game.state.add("Preload", preload);
     game.state.add("TitleScreen", titleScreen);
@@ -50,6 +54,8 @@ class preload {
         loadingBar.anchor.setTo(0.5);
         game.load.image("background", "assets/sprites/game-play.png");
         game.load.image("playbutton", "assets/sprites/playbutton.png");
+        game.load.image("outer-bar", "assets/sprites/outer-bar.png");
+        game.load.image("inner-bar", "assets/sprites/inner-bar.png");
         game.load.image("hand", "assets/sprites/hand.png");
         game.load.image("bigtile", "assets/sprites/bigtile.png");
         game.load.image("title", "assets/sprites/title.png");
@@ -60,9 +66,9 @@ class preload {
         game.load.spritesheet("egg-3", "assets/sprites/egg-3.png", gameOptions.tileSize, gameOptions.tileSize);
         game.load.spritesheet("arrows", "assets/sprites/arrows.png", gameOptions.tileSize * 3, gameOptions.tileSize * 3);
         game.load.spritesheet("numbers", "assets/sprites/numbers.png", gameOptions.tileSize, gameOptions.tileSize);
-        // game.load.bitmapFont("bignumbersfont", "assets/fonts/bignumbersfont.png", "assets/fonts/bignumbersfont.fnt");
-        // game.load.bitmapFont("recapfont", "assets/fonts/recapfont.png", "assets/fonts/recapfont.ftn");
-        // game.load.bitmapFont("font", "assets/fonts/font.png", "assets/fonts/font.ftn");
+        game.load.bitmapFont("bignumbersfont", "assets/fonts/bignumbersfont.png", "assets/fonts/bignumbersfont.fnt");
+        game.load.bitmapFont("recapfont", "assets/fonts/recapfont.png", "assets/fonts/recapfont.fnt");
+        game.load.bitmapFont("font", "assets/fonts/font.png", "assets/fonts/font.fnt");
         game.load.audio("pop", ["assets/sounds/pop.mp3", "assets/sounds/pop.ogg"]);
         game.load.audio("pop2", ["assets/sounds/pop.mp3", "assets/sounds/pop.ogg"]);
         game.load.audio("pop3", ["assets/sounds/pop.mp3", "assets/sounds/pop.ogg"]);
@@ -77,28 +83,65 @@ class preload {
 class titleScreen {
     constructor(game) { }
     create() {
-        savedData = localStorage.getItem(gameOptions.localStorageName) == null ? { score: 0 } : JSON.parse(localStorage.getItem(gameOptions.localStorageName));
-        var title = game.add.image(game.width / 2, 20, "title");
-        title.anchor.set(0.5, 0);
-        var playButton = game.add.button(game.width / 2, game.height / 2, "playbutton", this.startGame);
+        const title = game.add.image(game.width / 2, game.height / 3.5, "title");
+        title.anchor.set(0.5);
+        const outerBar = game.add.image(game.width / 2, game.height - 200, "outer-bar");
+        outerBar.anchor.set(0.5);
+        const innerBar = game.add.image(game.width / 2.6, game.height - 217, "inner-bar");
+        innerBar.anchor.set(1, 0.5);
+
+        // Add masking to innerBar
+        const mask = game.add.graphics(0, 0);
+        mask.beginFill(0xffffff);
+        mask.drawEllipse(outerBar.x + 36, outerBar.y - 10, outerBar.width / 2 + 20, outerBar.height);
+        innerBar.mask = mask;
+
+        // Animation of innerBar moving towards the right within outerBar
+        const innerBarWidth = innerBar.width;
+        const outerBarWidth = outerBar.width;
+        const innerBarTween = game.add.tween(innerBar).to({
+            x: game.width / 2 + (outerBarWidth - 5) - (innerBarWidth / 2)
+        }, 100, "Linear", true);
+        innerBarTween.onComplete.add(() => {
+            outerBar.destroy();
+            innerBar.destroy();
+            mask.destroy();
+            this.playButtonOnComplete();
+        }, this);
+    }
+    playButtonOnComplete() {
+        const playButton = game.add.button(game.width / 2, game.height - 200, "playbutton", this.startGame);
         playButton.anchor.set(0.5);
-        var tween = game.add.tween(playButton).to({
+        const tween = game.add.tween(playButton).to({
             width: 220,
             height: 220
         }, 1500, "Linear", true, 0, -1, true);
-        game.add.text(game.width / 2, game.height - 200, "BEST SCORE", { fontFamily: "timesnewroman", fontSize: 72 }).anchor.set(0.5);
-        game.add.text(game.width / 2, game.height - 100, savedData.score.toString(), { fontFamily: "Bungee", fontSize: 72 }).anchor.set(0.5);
     }
     startGame() {
-        game.plugin.fadeAndPlay(0x051f21, 0.25, "TheGame");
+        const egg1 = game.add.sprite(game.width / 1.8, game.height / 2.5, "egg-2");
+        const egg2 = game.add.sprite(game.width / 2.4, game.height / 3.5, "egg-3");
+        egg1.anchor.set(0.5);
+        egg2.anchor.set(0.5);
+        const egg1Tween = game.add.tween(egg1).to({
+            y: game.height + 100
+        }, 700, "Linear", true);
+        const egg2Tween = game.add.tween(egg2).to({
+            y: game.height + 100
+        }, 800, "Linear", true);
+        egg2Tween.onComplete.add(() => {
+            egg1.destroy();
+            egg2.destroy();
+            game.plugin.fadeAndPlay(0x00ff00, 0, "TheGame");
+        }, this);
     }
 }
 class theGame {
     constructor() { }
     create() {
+        savedData = localStorage.getItem(gameOptions.localStorageName) == null ? { score: 0 } : JSON.parse(localStorage.getItem(gameOptions.localStorageName));
+        const background = game.add.sprite(975, 630, "background");
         this.createLevel();
-        // const background = game.add.sprite(375, 667, "background");
-        // background.anchor.set(0.5);
+        background.anchor.set(0.5);
         // background.scale.set(0.8);
         game.input.onDown.add(this.pickTile, this);
         this.popSound = [game.add.audio("pop"), game.add.audio("pop2"), game.add.audio("pop3")];
@@ -124,14 +167,14 @@ class theGame {
         this.arrowsGroup = game.add.group();
         this.arrowsGroup.x = this.tileGroup.x;
         this.arrowsGroup.y = this.tileGroup.y;
-        var item = game.add.image(game.width / 2, this.tileGroup.y - 70, "item");
-        item.anchor.set(0.5);
-        item.tint = 0x443A11;
-        this.recapText = game.add.text(40, item.y - 40, "", { fontFamily: "recapfont", fontSize: 72 });
-        this.scoreText = game.add.text(game.width - 40, item.y - 130, "", { fontFamily: "font", fontSize: 72 });
-        this.scoreText.anchor.set(1, 0);
-        this.targetGroup = game.add.group();
+        // var item = game.add.image(game.width / 2, this.tileGroup.y - 70, "item");
+        // item.anchor.set(0.5);
+        // item.tint = 0x443A11;
+        this.recapText = game.add.text(580, this.tileGroup.y - 135, "", { fontFamily: "recapfont", fontSize: 48, fill: "#f49510", font: "bold 48px 'Dunkin'" });
+        this.scoreText = game.add.text(1420, this.tileGroup.y - 90, "", { fontFamily: "font", fontSize: 36, fill: "#4C2300", font: "normal 36px 'Dunkin'" });
+        this.scoreText.anchor.set(0.5);
         this.arcGraphics = game.add.graphics(-30, -40);
+        this.targetGroup = game.add.group();
         this.tileMask = game.add.graphics(this.tileGroup.x, this.tileGroup.y - 40);
         this.tileMask.beginFill(0xffffff);
         this.tileMask.drawRect(0, 0, gameOptions.tileSize * gameOptions.fieldSize.cols, gameOptions.tileSize * gameOptions.fieldSize.rows + 40);
@@ -144,17 +187,17 @@ class theGame {
         }
         this.removedTiles = [];
         for (i = 0; i < 5; i++) {
-            var target = game.add.sprite((i % 5) * 150 + 115 * Math.floor(i / 5), 50 + Math.floor(i / 5) * 200, "bigtile");
+            var target = game.add.sprite((i % 5) * 180 + 115 * Math.floor(i / 5), 40 + Math.floor(i / 5) * 200, "bigtile");
             // target.tint = this.altTintColor;
             target.numberToMatch = game.rnd.between(10, 14);
             target.energy = 360;
             target.energyLoss = this.energyLoss;
-            var bigNumber = game.add.text(69, 60, target.numberToMatch.toString(), { fontFamily: "bignumbersfont", fontSize: 50 });
+            var bigNumber = game.add.text(69, 60, target.numberToMatch.toString(), { fontFamily: "bignumbersfont", fontSize: 50, fill: "#e2f83a", font: "bold 50px 'Dunkin'" });
             bigNumber.anchor.set(0.5);
             target.addChild(bigNumber);
             this.targetGroup.add(target);
             this.targetsArray.push(target);
-            this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 100, 30, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
+            this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 98, 30, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
         }
         this.targetGroup.x = (game.width - this.targetGroup.width) / 2;
         this.timeLoop = game.time.events.loop(Phaser.Timer.SECOND / 20, this.updateCounter, this);
@@ -170,16 +213,16 @@ class theGame {
             x: this.tilesArray[tweenArray[2]][tweenArray[3]].x - 80,
             y: this.tilesArray[tweenArray[2]][tweenArray[3]].y
         }, 500, Phaser.Easing.Linear.None, true, 0, -1, true);
-        this.infoText = game.add.text(game.width / 2, item.y, "Connect blue numbers to sum them and\nmatch red numbers before time runs out\nLonger connections give more points", { fontFamily: "Bungee", fontSize: 24 });
-        this.infoText.anchor.set(0.5);
+        this.infoText = game.add.text(580, this.tileGroup.y - 115, " Connect eggs and match above given numbers", { align: "center", fontFamily: "recapfont", fontSize: 24, font: "bold 24px 'Dunkin'", fill: "#f49510", wordWrap: true, wordWrapWidth: 800 });
+        // this.infoText.anchor.set(0.5);
     }
     updateCounter() {
         this.arcGraphics.clear();
-        this.arcGraphics.lineStyle(5, 0xffffff);
+        this.arcGraphics.lineStyle(100, 0x471F00);
         for (var i = 0; i < this.targetsArray.length; i++) {
             this.targetsArray[i].energy -= this.targetsArray[i].energyLoss;
             if (this.targetsArray[i].energy > 0) {
-                this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 100, 30, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
+                this.arcGraphics.arc(this.targetsArray[i].x + 100 + this.targetGroup.x, this.targetsArray[i].y + 98, 30, 0, Phaser.Math.degToRad(this.targetsArray[i].energy), false);
             }
             else {
                 game.time.events.remove(this.timeLoop);
@@ -197,8 +240,8 @@ class theGame {
         }
     }
     addTile(row, col) {
-        var tileXPos = col * gameOptions.tileSize + gameOptions.tileSize / 2;
-        var tileYPos = row * gameOptions.tileSize + gameOptions.tileSize / 2;
+        var tileXPos = col * (gameOptions.tileSize + 10) + gameOptions.tileSize / 3;
+        var tileYPos = row * (gameOptions.tileSize + 10) + gameOptions.tileSize / 3;
         const randomTile = gameOptions.tiles[Phaser.Math.between(0, 2)];
         var theTile = game.add.sprite(tileXPos, tileYPos, randomTile);
         theTile.anchor.set(0.5);
@@ -208,7 +251,9 @@ class theGame {
         theTile.value = game.rnd.between(1, 9);
         // theTile.tint = this.tintColor;
         var number = game.add.sprite(0, 0, "numbers");
-        number.anchor.set(0.5);
+        number.anchor.set(0.45, 0.4);
+        number.scale.set(0.7);
+        number.tint = 0x3A1900;
         number.frame = theTile.value - 1;
         theTile.addChild(number);
         this.tileGroup.add(theTile);
@@ -224,13 +269,13 @@ class theGame {
         if (this.tileGroup.getBounds().contains(e.position.x, e.position.y)) {
             var col = Math.floor((e.position.x - this.tileGroup.x) / gameOptions.tileSize);
             var row = Math.floor((e.position.y - this.tileGroup.y) / gameOptions.tileSize);
-            this.tilesArray[row][col].tint = this.altTintColor;
+            // this.tilesArray[row][col].tint = this.altTintColor;
             this.tilesArray[row][col].picked = true;
             game.input.onDown.remove(this.pickTile, this);
             game.input.onUp.add(this.releaseTile, this);
             game.input.addMoveCallback(this.moveTile, this);
             this.visitedTiles.push(this.tilesArray[row][col].coordinate);
-            this.recapText.text = this.tilesArray[row][col].value;
+            this.recapText.text = ` ${this.tilesArray[row][col].value}`;
             Phaser.ArrayUtils.getRandomItem(this.popSound).play();
         }
     }
@@ -243,7 +288,7 @@ class theGame {
                 if (!this.tilesArray[row][col].picked && this.checkAdjacent(new Phaser.Point(col, row), this.visitedTiles[this.visitedTiles.length - 1])) {
                     if (this.visitedTiles.length < 8) {
                         this.tilesArray[row][col].picked = true;
-                        this.tilesArray[row][col].tint = this.altTintColor;
+                        // this.tilesArray[row][col].tint = this.altTintColor;
                         this.visitedTiles.push(this.tilesArray[row][col].coordinate);
                         this.addArrow();
                         Phaser.ArrayUtils.getRandomItem(this.popSound).play();
@@ -252,14 +297,14 @@ class theGame {
                 else {
                     if (this.visitedTiles.length > 1 && row == this.visitedTiles[this.visitedTiles.length - 2].y && col == this.visitedTiles[this.visitedTiles.length - 2].x) {
                         this.tilesArray[this.visitedTiles[this.visitedTiles.length - 1].y][this.visitedTiles[this.visitedTiles.length - 1].x].picked = false;
-                        this.tilesArray[this.visitedTiles[this.visitedTiles.length - 1].y][this.visitedTiles[this.visitedTiles.length - 1].x].tint = this.tintColor;
+                        // this.tilesArray[this.visitedTiles[this.visitedTiles.length - 1].y][this.visitedTiles[this.visitedTiles.length - 1].x].tint = this.tintColor;
                         this.visitedTiles.pop();
                         this.arrowsArray[this.arrowsArray.length - 1].destroy();
                         this.arrowsArray.pop();
                         Phaser.ArrayUtils.getRandomItem(this.popSound).play();
                     }
                 }
-                var stringToShow = this.tilesArray[this.visitedTiles[0].y][this.visitedTiles[0].x].value;
+                var stringToShow = ` ${this.tilesArray[this.visitedTiles[0].y][this.visitedTiles[0].x].value}`;
                 for (var i = 1; i < this.visitedTiles.length; i++) {
                     stringToShow += "+" + this.tilesArray[this.visitedTiles[i].y][this.visitedTiles[i].x].value;
                 }
@@ -293,6 +338,9 @@ class theGame {
                     didMatch = true;
                     score += totalSum * (this.visitedTiles.length - 1);
                     this.scoreText.text = score.toString();
+                    if (score > 999) {
+                        this.scoreText.fontSize = 36;
+                    }
                 }
             }
         }
@@ -308,7 +356,7 @@ class theGame {
         }
         else {
             for (var i = 0; i < this.visitedTiles.length; i++) {
-                this.tilesArray[this.visitedTiles[i].y][this.visitedTiles[i].x].tint = this.tintColor;
+                // this.tilesArray[this.visitedTiles[i].y][this.visitedTiles[i].x].tint = this.tintColor;
                 this.tilesArray[this.visitedTiles[i].y][this.visitedTiles[i].x].picked = false;
             }
             this.failSound.play();
@@ -321,7 +369,7 @@ class theGame {
     addArrow() {
         var fromTile = this.visitedTiles[this.visitedTiles.length - 2];
         var arrow = game.add.sprite(this.tilesArray[fromTile.y][fromTile.x].x, this.tilesArray[fromTile.y][fromTile.x].y, "arrows");
-        arrow.tint = this.tintColor;
+        // arrow.tint = this.tintColor;
         this.arrowsGroup.add(arrow);
         arrow.anchor.set(0.5);
         var tileDiff = new Phaser.Point(this.visitedTiles[this.visitedTiles.length - 1].x, this.visitedTiles[this.visitedTiles.length - 1].y);
@@ -356,7 +404,7 @@ class theGame {
                         var coordinate = new Phaser.Point(this.tilesArray[i][j].coordinate.x, this.tilesArray[i][j].coordinate.y);
                         var destination = new Phaser.Point(j, i + holes);
                         var tween = game.add.tween(this.tilesArray[i][j]).to({
-                            y: this.tilesArray[i][j].y + holes * gameOptions.tileSize
+                            y: this.tilesArray[i][j].y + holes * (gameOptions.tileSize + 10)
                         }, gameOptions.fallSpeed, Phaser.Easing.Linear.None, true);
                         tween.onComplete.add(this.nextPick, this);
                         this.tilesArray[destination.y][destination.x] = this.tilesArray[i][j];
@@ -373,15 +421,15 @@ class theGame {
             var holes = this.holesInCol(i);
             if (holes > 0) {
                 for (var j = 1; j <= holes; j++) {
-                    var tileXPos = i * gameOptions.tileSize + gameOptions.tileSize / 2;
-                    var tileYPos = -j * gameOptions.tileSize + gameOptions.tileSize / 2;
+                    var tileXPos = i * (gameOptions.tileSize + 10) + gameOptions.tileSize / 3;
+                    var tileYPos = -j * (gameOptions.tileSize + 10) + gameOptions.tileSize / 3;
                     var theTile = this.removedTiles.pop();
                     theTile.position = new Phaser.Point(tileXPos, tileYPos);
                     theTile.visible = true;
-                    theTile.tint = this.tintColor;
+                    // theTile.tint = this.tintColor;
                     theTile.picked = false;
                     var tween = game.add.tween(theTile).to({
-                        y: theTile.y + holes * gameOptions.tileSize
+                        y: theTile.y + holes * (gameOptions.tileSize + 10)
                     }, gameOptions.fallSpeed, Phaser.Easing.Linear.None, true);
                     tween.onComplete.add(this.nextPick, this);
                     theTile.coordinate = new Phaser.Point(i, holes - j);
@@ -438,10 +486,10 @@ class gameOver {
     constructor() { }
     create() {
         var bestScore = Math.max(score, savedData.score);
-        game.add.text(game.width / 2, 100, "Your score", { fontFamily: "font", fontSize: 48 }).anchor.set(0.5);
-        game.add.text(game.width / 2, 200, score.toString(), { fontFamily: "bignumbersfont", fontSize: 90 }).anchor.set(0.5);
-        game.add.text(game.width / 2, game.height - 200, "Best score", { fontFamily: "font", fontSize: 48 }).anchor.set(0.5);
-        game.add.text(game.width / 2, game.height - 100, bestScore.toString(), { fontFamily: "bignumbersfont", fontSize: 90 }).anchor.set(0.5);
+        game.add.text(game.width / 2, 100, " Your score ", { fontFamily: "font", fontSize: 48, fill: "#4C2300", font: "normal 48px 'Dunkin'" }).anchor.set(0.5);
+        game.add.text(game.width / 2, 200, ` ${score.toString()} `, { fontFamily: "bignumbersfont", fontSize: 90, fill: "#4C2300", font: "normal 90px 'Dunkin'" }).anchor.set(0.5);
+        game.add.text(game.width / 2, game.height - 200, " Best score ", { fontFamily: "font", fontSize: 48, fill: "#4C2300", font: "normal 48px 'Dunkin'" }).anchor.set(0.5);
+        game.add.text(game.width / 2, game.height - 100, ` ${bestScore.toString()} `, { fontFamily: "bignumbersfont", fontSize: 90, fill: "#4C2300", font: "normal 90px 'Dunkin'" }).anchor.set(0.5);
         localStorage.setItem(gameOptions.localStorageName, JSON.stringify({
             score: bestScore
         }));
@@ -468,10 +516,10 @@ Phaser.Plugin.FadePlugin.prototype.fadeAndPlay = function (style, time, nextStat
     this.overlay.alpha = 0;
     var fadeTween = this.game.add.tween(this.overlay);
     fadeTween.to({
-        alpha: 1
+        alpha: 0
     },
-        time * 1000, Phaser.Easing.None, true);
-    fadeTween.onComplete.add(function () {
+        time * 0, Phaser.Easing.None, true);
+    fadeTween.onStart.add(function () {
         this.game.state.start(nextState);
     }, this);
 };
