@@ -1,3 +1,4 @@
+// import Phaser from "phaser";
 var game;
 var savedData;
 var score;
@@ -113,11 +114,12 @@ class titleScreen {
         const playButton = game.add.button(game.width / 2, game.height - 200, "playbutton", this.startGame);
         playButton.anchor.set(0.5);
         const tween = game.add.tween(playButton).to({
-            width: 220,
-            height: 220
-        }, 1500, "Linear", true, 0, -1, true);
+            width: 200,
+            height: 200
+        }, 700, "Linear", true, 0, -1, true);
     }
-    startGame() {
+    startGame(playButton) {
+        playButton.inputEnabled = false;
         const egg1 = game.add.sprite(game.width / 1.8, game.height / 2.5, "egg-2");
         const egg2 = game.add.sprite(game.width / 2.4, game.height / 3.5, "egg-3");
         egg1.anchor.set(0.5);
